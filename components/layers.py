@@ -147,6 +147,10 @@ class GATLayer(nn.Module):
         return out
 
 
+import torch
+import torch.nn as nn
+from torch_geometric.nn import GINEConv, GraphNorm
+
 class GINLayer(nn.Module):
     def __init__(
         self,
@@ -155,20 +159,19 @@ class GINLayer(nn.Module):
         edge_dim,
         num_lin_layers=2,
         eps=0.0):
-
+            
         super(GINLayer, self).__init__()
-        self.eps = nn.Parameter(torch.Tensor([eps]))
         layers = [nn.Linear(input_dim, output_dim), nn.ReLU()]
         for _ in range(num_lin_layers - 1):
-            layers += [nn.Linear(
-                output_dim, output_dim), nn.ReLU()]
+            layers += [nn.Linear(output_dim, output_dim), nn.ReLU()]
         self.conv = GINEConv(
             nn.Sequential(*layers),
+            eps=eps,
+            train_eps=True,
             edge_dim=edge_dim
             )
         self.conv_norm = GraphNorm(output_dim)
-        self.feature_projection = nn.Linear(
-            output_dim, output_dim)
+        self.feature_projection = nn.Linear(output_dim, output_dim)
         self.control_gate = nn.Sequential(
             nn.Linear(2 * output_dim, output_dim),
             nn.Sigmoid()
@@ -180,22 +183,18 @@ class GINLayer(nn.Module):
             )
         self.post_norm = GraphNorm(output_dim)
 
-    def forward(
-        self, x, 
-        edge_index, 
-        edge_attr, 
-        batch):
-
+    def forward(self, x, edge_index, edge_attr, batch):
+        
         x = self.conv(x, edge_index, edge_attr)
         x = self.conv_norm(x, batch)
-
         proj = self.feature_projection(x)
         gate = self.control_gate(torch.cat([proj, x], dim=-1))
         out = gate * proj + (1 - gate) * x
-
+        res = out
         out = self.post_mlp(out)
+        out = out + res
         out = self.post_norm(out, batch)
-
+        
         return out
 
     
@@ -431,3 +430,4 @@ class tMPNNLayer(MessagePassing):
     
 
         return out
+
