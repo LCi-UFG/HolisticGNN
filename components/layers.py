@@ -193,8 +193,8 @@ class GINLayer(nn.Module):
         gate = self.control_gate(torch.cat([proj, x], dim=-1))
         out = gate * proj + (1 - gate) * x
 
-        out = self.post_mlp(x)
-        out = self.post_norm(x, batch)
+        out = self.post_mlp(out)
+        out = self.post_norm(out, batch)
 
         return out
 
@@ -429,4 +429,5 @@ class tMPNNLayer(MessagePassing):
         out = self.layer_norm(out)
         out = self.att_dropout(out)
     
+
         return out
