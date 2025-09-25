@@ -28,7 +28,6 @@ class tMPNNet(nn.Module):
         activation,
         dropout_rate,
         num_tasks,
-        latent_dim,
         task_type='classification',
         embedding_dim=None):
 
@@ -134,7 +133,8 @@ class tMPNNet(nn.Module):
 
         if save_embeddings:
             self.saved_embeddings.append(
-                penultimate.detach().cpu())
+                penultimate.detach().cpu()
+            )
         if return_penultimate:
             return penultimate
         

@@ -223,8 +223,7 @@ def configure_eegnn(
     trial, 
     node_dim, 
     edge_dim, 
-    num_tasks,  
-    latent_dim=None):
+    num_tasks):
     
     agg_hidden_dims = [
         trial.suggest_int(f'agg_hidden_dim_{i+1}', 10, 500) 
@@ -270,8 +269,7 @@ def configure_eegnn(
         concentration,
         prior_concentration,
         mcmc_iters,
-        num_tasks,  
-        latent_dim
+        num_tasks  
         )
     
     return model
@@ -281,8 +279,7 @@ def configure_tmpnn(
     trial, 
     node_dim, 
     edge_dim, 
-    num_tasks,  
-    latent_dim=None):
+    num_tasks):
 
     agg_hidden_dims = [
         trial.suggest_categorical(f'agg_hidden_dim_{i+1}', 
@@ -317,8 +314,7 @@ def configure_tmpnn(
         len(lin_hidden_dims),
         activation_choice,
         dropout_rate,
-        num_tasks,
-        latent_dim
+        num_tasks
         )
 
     return model

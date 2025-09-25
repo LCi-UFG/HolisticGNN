@@ -22,7 +22,6 @@ class EEGNNet(nn.Module):
         prior_concentration,
         mcmc_iters,
         num_tasks,
-        latent_dim=None,
         task_type='classification',
         embedding_dim=None):
 

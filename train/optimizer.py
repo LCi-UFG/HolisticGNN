@@ -234,7 +234,7 @@ def retrain(
             best_params['num_lin_layers'], 
             best_params['activation'], 
             best_params['dropout_rate'],
-            num_tasks,
+            num_tasks
             )
     
     else:

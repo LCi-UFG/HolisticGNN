@@ -134,9 +134,7 @@ def load_model(
             concentration=params['concentration'],
             prior_concentration=params['prior_concentration'],
             mcmc_iters=params['mcmc_iters'],
-            num_tasks=num_tasks,  
-            use_projector=False,  
-            latent_dim=None 
+            num_tasks=num_tasks  
             )
     elif architecture_type == 'tmpnn':
         model = tMPNNet(
@@ -148,9 +146,7 @@ def load_model(
             num_lin_layers=params['num_lin_layers'],
             activation=params['activation'],
             dropout_rate=params['dropout_rate'],
-            num_tasks=num_tasks,  
-            use_projector=False,  
-            latent_dim=None 
+            num_tasks=num_tasks  
             )
     else:
         raise ValueError("Invalid architecture type")
