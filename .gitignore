@@ -1,7 +1,5 @@
 *.pyc
-*.csv
 *.xlsx
 *.db
-*.json
 *.png
 *.pt

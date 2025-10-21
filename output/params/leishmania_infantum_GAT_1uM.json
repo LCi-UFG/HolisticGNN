@@ -1,0 +1,15 @@
+{
+    "num_agg_layers": 4,
+    "agg_hidden_dim_1": 224,
+    "agg_hidden_dim_2": 20,
+    "agg_hidden_dim_3": 352,
+    "agg_hidden_dim_4": 479,
+    "num_lin_layers": 2,
+    "lin_hidden_dim_1": 312,
+    "lin_hidden_dim_2": 491,
+    "activation": "elu",
+    "dropout_rate": 0.2072672792156378,
+    "heads": 2,
+    "optimizer": "RMSprop",
+    "weight_decay": 8.807311883969046e-05
+}

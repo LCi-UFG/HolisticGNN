@@ -1,0 +1,15 @@
+{
+    "num_agg_layers": 3,
+    "agg_hidden_dim_1": 64,
+    "agg_hidden_dim_2": 358,
+    "agg_hidden_dim_3": 312,
+    "num_lin_layers": 3,
+    "lin_hidden_dim_1": 91,
+    "lin_hidden_dim_2": 121,
+    "lin_hidden_dim_3": 159,
+    "activation": "selu",
+    "dropout_rate": 0.20033156725311663,
+    "heads": 8,
+    "optimizer": "RMSprop",
+    "weight_decay": 2.4683503214893865e-06
+}
