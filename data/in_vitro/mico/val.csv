@@ -1,5 +1,4 @@
 ID,SMILES,M-fortuitum,M-kansasii,M-bovis,M-tuberculosis-MABA,M-tuberculosis-LORA,M-smegmatis,M-abcessus,M-tuberculosis-BACTEC,task_concatenada
-12137,CCC(C)c1ccc(-n2c(=O)oc3cc(Cl)ccc3c2=O)cc1,,,,,,,,,
 9817,Cc1cccc(Cn2c(=O)c(C(=O)Nc3ccc(Cl)cc3)c(-c3ccccc3)c3cc(Cl)ccc32)c1,,,,0.0,,,,,
 4709,Fc1ccccc1Cn1cc(CN2c3ccccc3Sc3ccccc32)nn1,,,,1.0,,,,,
 11570,c1ccc(Cn2cc(Cn3ccc4cncnc43)nn2)cc1,,,,0.0,,,,,
@@ -461,7 +460,6 @@ ID,SMILES,M-fortuitum,M-kansasii,M-bovis,M-tuberculosis-MABA,M-tuberculosis-LORA
 2055,CCC(Sc1nc2ccccc2o1)C(=O)Nc1nccs1,,,,0.0,,,,,
 16589,O=C(Oc1cc(Cl)ccc1C(=O)Nc1ncc([N+](=O)[O-])s1)c1ccccc1,,,,,,,,,0.0
 5199,C=Cc1cn(-c2ccc(Cl)cc2)nn1,,,,0.0,,,,,
-12144,O=C(O)c1c(O)c(F)c(F)c(F)c1F,,,,,,,,,
 14492,Cc1ccc(NC(=O)c2nc3cc(Cl)ccc3s2)cc1,,,,,,,,,1.0
 4177,Cc1nc([N+](=O)[O-])cn1CC(OCc1ccc(Cl)cc1)c1ccc(Cl)cc1Cl,,,,0.0,,,,,
 14272,CC(C)=CCCC(C)=CCc1c(O)cc(CCc2ccccc2)c(C(=O)O)c1O,,,,,,,,,0.0

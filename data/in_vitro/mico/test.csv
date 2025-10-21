@@ -1090,7 +1090,6 @@ ID,SMILES,M-fortuitum,M-kansasii,M-bovis,M-tuberculosis-MABA,M-tuberculosis-LORA
 6651,CN(Cc1cn(-c2ccc(F)cc2)nn1)c1nc(=O)c2cc(S(C)(=O)=O)cc([N+](=O)[O-])c2s1,,,,1.0,,,,,
 12848,O=C(Nc1nnc(-c2ccccc2Cl)o1)c1cccc(C(F)(F)F)c1,,,,,,1.0,,,
 16428,CSc1ccc(C2C3CSCN3C3(C(=O)Nc4ccc([N+](=O)[O-])cc43)C23C(=O)Oc2ccccc23)cc1,,,,,,,,,0.0
-12136,Cc1ccc(-n2c(=O)oc3ccc(Br)cc3c2=O)cc1,,,,,,,,,
 3653,O=[N+]([O-])c1cn2c(n1)OCC(OCC#Cc1cccc(-c3ccc(C(F)(F)F)cc3)c1)C2,,,,1.0,1.0,,,,
 1890,c1cc(Nc2cc(C3CC3)[nH]n2)nc(NC2CCCCC2)n1,,,,0.0,,,,,
 9282,C=c1c(O)c2c(c(O)c1OC)=c1ccccc1=N2,,,,1.0,,,,,
@@ -1676,7 +1675,6 @@ ID,SMILES,M-fortuitum,M-kansasii,M-bovis,M-tuberculosis-MABA,M-tuberculosis-LORA
 1397,CC1(CN2CCc3nc(-c4cc(F)ccc4Cl)ccc3C2)Cn2cc([N+](=O)[O-])nc2O1,,,1.0,1.0,1.0,,,,
 12034,CCCCCCC(=O)Oc1cccc(Nc2nc3ccccc3c(=O)o2)c1,,,,,0.0,0.0,,,
 3596,O=[N+]([O-])c1cn2c(n1)OCC(OCCCC#Cc1ccc(-c3ccc(F)cc3)cc1)C2,,,,1.0,1.0,,,,
-12142,O=C(O)c1cc(F)c(F)cc1O,,,,,,,,,
 13931,Clc1cc(Cl)cc(Nc2nc(-c3c[nH]nn3)cs2)c1,,,,,,,,,0.0
 3016,COc1ccccc1N=Nc1c(O)[nH]c2c([N+](=O)[O-])cccc2c1=O,,,,0.0,,,,,
 12324,CN1CCC(=O)C2(C1)C(c1ccccc1Cl)CN(C)C21C(=O)Nc2ccccc21,,,,,,0.0,,,1.0
