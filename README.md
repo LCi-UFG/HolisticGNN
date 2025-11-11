@@ -32,10 +32,8 @@ Faculty of Pharmacy
 Federal University of Goiás (UFG)  
 Brazil
 
-## Exclusive Use
-For exclusive use by LCi and its collaborators.
-
 👥 **Development Team:**
 - Gustavo Felizardo Santos Sandes — [ORCID: 0000-0002-0591-5133](https://orcid.org/0000-0002-0591-5133)  
 - Vinícius Alexandre Fiaia Costa — [ORCID: 0000-0001-6479-5963](https://orcid.org/0000-0001-6479-5963)  
 - Bruno Junior Neves — [ORCID: 0000-0002-1309-8743](https://orcid.org/0000-0002-1309-8743) 
+

@@ -153,11 +153,10 @@ class GINLayer(nn.Module):
         input_dim,
         output_dim,
         edge_dim,
-        num_lin_layers=2,
-        eps=0.0):
+        num_lin_layers=2):
 
         super(GINLayer, self).__init__()
-        self.eps = nn.Parameter(torch.Tensor([eps]))
+
         layers = [nn.Linear(input_dim, output_dim), nn.ReLU()]
         for _ in range(num_lin_layers - 1):
             layers += [nn.Linear(
@@ -188,13 +187,11 @@ class GINLayer(nn.Module):
 
         x = self.conv(x, edge_index, edge_attr)
         x = self.conv_norm(x, batch)
-
         proj = self.feature_projection(x)
         gate = self.control_gate(torch.cat([proj, x], dim=-1))
         out = gate * proj + (1 - gate) * x
-
-        out = self.post_mlp(x)
-        out = self.post_norm(x, batch)
+        out = self.post_mlp(out)
+        out = self.post_norm(out, batch)
 
         return out
 
@@ -426,7 +423,7 @@ class tMPNNLayer(MessagePassing):
             batch=batch_edge
         )
         out = out + self.residual(x_in)
-        out = self.layer_norm(out)
+        out = self.layer_norm(out, batch)
         out = self.att_dropout(out)
     
         return out
