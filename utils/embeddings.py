@@ -18,8 +18,13 @@ def filter_nan(labels, embeddings):
 
 
 def normalize_embeddings(embeddings):
-    scaler = StandardScaler()
-    return scaler.fit_transform(embeddings)
+
+    X = np.asarray(embeddings, dtype=float)
+    n = np.linalg.norm(
+        X, axis=1, keepdims=True
+        )
+    n[n == 0] = 1.0
+    return X/n
 
 
 def embeddings2tSNE(embeddings, perplexity, learning_rate, seed):
