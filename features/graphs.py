@@ -2,8 +2,8 @@ import torch
 from torch.utils.data import Dataset
 from rdkit import Chem
 from torch_geometric.data import Data
-from rules import ATOMIC_NUMBER
 from utils import one_hot
+from rules import ATOMIC_NUMBER
 
 
 def get_atomic_number():

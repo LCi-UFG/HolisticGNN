@@ -16,72 +16,117 @@ from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils import (
     get_laplacian,
-    to_dense_adj,
-    to_scipy_sparse_matrix
+    to_dense_adj
     )
 from torch.quasirandom import SobolEngine
 
-from utils import (
-    decode_one_hot, 
-    one_hot
+from augmentations import apply_rulebook_perturbations
+    
+from rules import (
+    ATOMIC_NUMBER,
+    feature_slices
     )
-from rules import ATOMIC_NUMBER
-from augmentations import (
-    atomic_rules,
-    charge_rules,
-    hybridization_rules
-    )
+from utils import decode_one_hot
 from predictor import predict
 
 
 def mask_atoms(
-    data_raw, idx, 
-    seed=None):
+    data_raw, idx,
+    seed=None,
+    all_candidates=False):
 
     if seed is not None:
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
 
-    data = copy.deepcopy(data_raw)
-    atoms = ATOMIC_NUMBER()
-    n_atoms = len(atoms)
+    candidates = apply_rulebook_perturbations(
+        data_raw,
+        idx,
+        families=[
+            "SP2_POLAR_ALL",
+            "SP3_POLAR_ALL",
+            "SP2_APOLAR_ALL",
+            "SP3_APOLAR_ALL",
+            "SP2_REACTIVE_ALL",
+            "SP3_REACTIVE_ALL",
+            "REDOX_FAMILY",
+            "ACYL_FAMILY_ALL",
+            "CARBAMATE_FAMILY_ALL",
+            "AMIDE_FAMILY_ALL",
+            "SULFURE_FAMILY_ALL",
+            "PHOSPHORUS_FAMILY_ALL",
+            "TOGGLE_CHARGE_FAMILY_ALL",
+            "POLYVALENT_FAMILY_ALL",
+            "TOGGLE_RING_FAMILY_ALL",
+            "RING_FAMILY_ALL",
+            "BOND_FAMILY_ALL",
+            "DIARYL_FAMILY_ALL"
+            ]
+        )
+    if not candidates:
+        if all_candidates:
+            return [(copy.deepcopy(data_raw), [idx])]
+        return copy.deepcopy(data_raw), [idx]
 
-    d_end = n_atoms + 8
-    c_start, c_end = d_end, d_end + 4
-    h_start, h_end = c_end, c_end + 5
-
-    old_atomic = data.x[idx, :n_atoms]
-    new_atomic = atomic_rules(old_atomic)
-    data.x[idx, :n_atoms] = torch.tensor(
-        new_atomic, 
-        dtype=torch.float,
-        device=data.x.device
-        )
-    atom_type = decode_one_hot(
-        new_atomic, atoms
-        )
-    old_charge = data.x[
-        idx, c_start:c_end
-        ]
-    new_charge = charge_rules(
-        atom_type, old_charge
-        )
-    data.x[idx, c_start:c_end] = torch.tensor(
-        one_hot(new_charge, [-1, 0, 1, 2]),
-        dtype=torch.float, 
-        device=data.x.device
-        )
-    old_hybrid = data.x[idx, h_start:h_end]
-    new_hybrid = hybridization_rules(
-        atom_type, old_hybrid
-        )
-    data.x[idx, h_start:h_end] = torch.tensor(
-        one_hot(new_hybrid, list(range(5))),
-        dtype=torch.float, device=data.x.device
-        )
-
-    return data
+    if not all_candidates:
+        def rule_family(rule_id):
+            parts = str(rule_id).split("_")
+            if "ALL" in parts:
+                idx = parts.index("ALL")
+                return "_".join(parts[:idx + 1])
+            if "FAMILY" in parts:
+                idx = parts.index("FAMILY")
+                return "_".join(parts[:idx + 1])
+            return parts[0]
+        buckets = {}
+        for cand in candidates:
+            fam = rule_family(cand[2])
+            buckets.setdefault(fam, []).append(cand)
+        fam_choice = random.choice(list(buckets.keys()))
+        data, removed, _rule = random.choice(buckets[fam_choice])
+        candidates = [(data, removed, _rule)]
+    results = []
+    for data, removed, _rule in candidates:
+        n0 = data_raw.x.size(0)
+        n1 = data.x.size(0)
+        group = set()
+        changed = []
+        changed_adj = []
+        if removed:
+            group.update(removed)
+            if not group:
+                group.add(idx)
+        else:
+            slices = feature_slices()
+            a_start, a_end = slices["atomic"]
+            min_n = min(n0, n1)
+            for j in range(min_n):
+                if not torch.equal(
+                    data_raw.x[j, a_start:a_end],
+                    data.x[j, a_start:a_end]
+                ):
+                    changed.append(j)
+            if n0 == n1:
+                def to_adj(edge_index, n):
+                    adj = [set() for _ in range(n)]
+                    for i, j in edge_index.t().tolist():
+                        adj[i].add(j)
+                        adj[j].add(i)
+                    return adj
+                adj_raw = to_adj(data_raw.edge_index, n0)
+                adj_new = to_adj(data.edge_index, n1)
+                for j in range(min_n):
+                    if adj_raw[j] != adj_new[j]:
+                        changed.append(j)
+                        changed_adj.append(j)
+            group.update(changed)
+            if not group:
+                group.add(idx)
+        results.append((data, sorted(group)))
+    if all_candidates:
+        return results
+    return results[0]
 
 
 def leave1atom(
@@ -90,9 +135,24 @@ def leave1atom(
     task_idx=0):
 
     base = copy.deepcopy(raw)
-    base.y = torch.zeros(
-        (1,), dtype=torch.float, device=device
-        )
+    if hasattr(raw, "y") and raw.y is not None:
+        y = raw.y
+        if y.dim() == 1:
+            y = y.unsqueeze(0)
+        base.y = y.to(device)
+    else:
+        tt = getattr(model, "task_type", None)
+        if tt is not None:
+            num_tasks = int(tt.numel())
+        else:
+            num_tasks = getattr(model, "num_tasks", None)
+        if num_tasks is None:
+            raise ValueError(
+                "Cannot infer num_tasks for explanations."
+                )
+        base.y = torch.zeros(
+            (1, num_tasks), dtype=torch.float, device=device
+            )
     p0_all, _, _ = predict(
         model,
         DataLoader([base], batch_size=1),
@@ -106,60 +166,55 @@ def leave1atom(
     pos = np.zeros(n)
     neg = np.zeros(n)
     trim = 0.1
+    per_node = [[] for _ in range(n)]
 
     for i in range(n):
         sobol = SobolEngine(1, scramble=True)
         seq = sobol.draw(num_perturb).squeeze()
-        deltas = []
-
         for v in seq:
             seed = int(v.item() * (2**32 - 1))
-            masked = mask_atoms(raw, i, seed=seed)
-            masked.y = torch.zeros(
-                (1,), dtype=torch.float, 
-                device=device
-                )
-            pred2_all, _, _ = predict(
-                model, DataLoader([masked], batch_size=1),
-                device, return_embeddings=False
-                )
-            p2 = pred2_all[0, task_idx]
-            deltas.append(p0 - p2)
+            all_masks = mask_atoms(raw, i, seed=seed, all_candidates=True)
+            for masked, group_nodes in all_masks:
+                if (torch.equal(raw.x, masked.x)
+                        and torch.equal(raw.edge_index, masked.edge_index)
+                        and torch.equal(raw.edge_attr, masked.edge_attr)):
+                    continue
+                if hasattr(raw, "y") and raw.y is not None:
+                    y_local = raw.y
+                    if y_local.dim() == 1:
+                        y_local = y_local.unsqueeze(0)
+                    masked.y = y_local.to(device)
+                else:
+                    masked.y = torch.zeros(
+                        (1, num_tasks), dtype=torch.float,
+                        device=device
+                        )
+                pred2_all, _, _ = predict(
+                    model, DataLoader([masked], batch_size=1),
+                    device, return_embeddings=False
+                    )
+                p2 = pred2_all[0, task_idx]
+                delta = float(p0 - p2)
+                if not group_nodes:
+                    group_nodes = [i]
+                share = delta / max(len(group_nodes), 1)
+                for node_idx in group_nodes:
+                    if node_idx < n:
+                        per_node[node_idx].append(share)
 
-        arr = np.array(deltas, dtype=float)
+    for i in range(n):
+        arr = np.array(per_node[i], dtype=float)
+        if arr.size == 0:
+            continue
         k = int(len(arr) * trim)
         if len(arr) > 2 * k:
             arr = np.sort(arr)[k:-k]
-
         mean[i] = arr.mean()
         std[i] = arr.std(ddof=0)
         pos[i] = np.mean(arr > 0)
         neg[i] = np.mean(arr < 0)
 
     return mean, std, pos, neg
-
-
-def cluster_predictions(
-    scores, 
-    edge_index):
-
-    n = scores.shape[0]
-    pos = np.where(scores >= 0)[0]
-    neg = np.where(scores < 0)[0]
-    edges = edge_index.cpu().numpy().T.tolist()
-    G = nx.Graph()
-    G.add_nodes_from(range(n))
-    G.add_edges_from(edges)
-    clusters = []
-
-    for idx in (pos, neg):
-        if idx.size:
-            for comp in nx.connected_components(
-                G.subgraph(idx)):
-                clusters.append(list(comp)
-                )
-
-    return clusters
 
 
 def plot_contours(
@@ -220,14 +275,11 @@ def view_explanations(
     device, 
     out_path,
     num_perturb=10,
-    cluster_alpha=0.5,
-    smooth_alpha=0.5,
     task_idx=0):
 
     model.to(device)
     model.eval()
     index = 1
-
     with torch.no_grad():
         for batch in loader:
             raw = copy.deepcopy(batch)
@@ -260,39 +312,15 @@ def view_explanations(
                     )
                 weight = pos - neg
                 node_imp = mean * weight
-
-                if n < 5:
-                    imp = node_imp.copy()
-                else:
-                    clusters = cluster_predictions(
-                        node_imp, ei
-                        )
-                    imp = np.zeros(n)
-                    for comp in clusters:
-                        vals = node_imp[comp]
-                        m = vals.mean()
-                        imp[comp] = m + cluster_alpha * (
-                            vals - m
-                        )
-                    A = to_scipy_sparse_matrix(
-                        ei, num_nodes=n
-                        )
-                    deg = np.array(
-                        A.sum(axis=1)
-                    ).flatten()
-                    Dinv = sp.diags(
-                        1.0 / (deg + 1e-8)
-                        )
-                    smooth = Dinv.dot(
-                        A.dot(imp)
-                        )
-                    imp = (
-                        smooth_alpha * imp +
-                        (1 - smooth_alpha) * smooth
-                        )
-                imp = (imp - imp.mean()) / (
-                    imp.std() + 1e-8
-                    )
+                imp = node_imp.copy()
+                nz_mask = np.abs(imp) > 1e-12
+                if np.any(nz_mask):
+                    nz_mean = imp[nz_mask].mean()
+                    nz_std = imp[nz_mask].std()
+                    if nz_std > 1e-12:
+                        imp[nz_mask] = (
+                            imp[nz_mask] - nz_mean) / (nz_std + 1e-8)
+                    imp[~nz_mask] = 0.0
                 plot_contours(
                     index, data.smiles,
                     imp, out_path
@@ -384,9 +412,7 @@ def view_attentions(
     model, 
     loader, 
     device, 
-    out_path,
-    cluster_alpha=0.5,
-    smooth_alpha=0.5):
+    out_path):
 
     model.to(device)
     model.eval()
@@ -402,7 +428,16 @@ def view_attentions(
             batch_idx = batch_data.batch
 
             for layer in model.agg_layers:
-                x = layer(x, edge_index, edge_attr)
+                try:
+                    out = layer(
+                        x, edge_index, edge_attr, batch_idx
+                        )
+                except TypeError:
+                    try:
+                        out = layer(x, edge_index, edge_attr)
+                    except TypeError:
+                        out = layer(x, edge_index)
+                x = out[0] if isinstance(out, tuple) else out
             lap_idx, lap_w = get_laplacian(
                 edge_index,
                 edge_weight=torch.ones(
@@ -425,7 +460,13 @@ def view_attentions(
                     adjacency_matrix
                     )
             else:
-                alpha = model.agg_layers[-1].last_attn_weights
+                last_layer = model.agg_layers[-1]
+                alpha = getattr(last_layer, "last_attn_weights", None)
+                if alpha is None:
+                    raise AttributeError(
+                        "view_attentions requires atom_attention or "
+                        "last_attn_weights on the last aggregation layer."
+                        )
                 N = x.size(0)
                 att = torch.zeros(N, N, device=device)
                 src, dst = edge_index
@@ -446,33 +487,15 @@ def view_attentions(
                 sub_ei = edge_index[:, mask].cpu().clone()
                 sub_ei[0] -= start
                 sub_ei[1] -= start
-
-                Amean = cluster_attentions(sub_attn, sub_ei)
-                if n < 5:
-                    att_vals = Amean.copy()
-                else:
-                    G = nx.Graph()
-                    G.add_nodes_from(range(n))
-                    G.add_edges_from(sub_ei.T.numpy().tolist())
-                    comps = list(nx.connected_components(G))
-                    att_vals = np.zeros(n)
-                    for comp in comps:
-                        m = list(comp)
-                        vals = Amean[m]
-                        avg = vals.mean()
-                        att_vals[m] = avg + cluster_alpha * (vals - avg)
-                    A = sp.coo_matrix(
-                        (np.ones(sub_ei.size(1)), (
-                            sub_ei[0], sub_ei[1])),
-                        shape=(n, n)).tocsr()
-                    deg = np.array(A.sum(axis=1)).flatten()
-                    Dinv = sp.diags(1.0 / (deg + 1e-8))
-                    smooth = Dinv @ A @ att_vals
-                    att_vals = smooth_alpha * att_vals + (
-                        1 - smooth_alpha) * smooth
-
-                att_vals = (att_vals - att_vals.mean()
-                        ) / (att_vals.std() + 1e-8)
+                att_vals = (sub_attn.sum(0).cpu().numpy() / max(n, 1))
+                nz_mask = np.abs(att_vals) > 1e-12
+                if np.any(nz_mask):
+                    nz_mean = att_vals[nz_mask].mean()
+                    nz_std = att_vals[nz_mask].std()
+                    if nz_std > 1e-12:
+                        att_vals[nz_mask] = (
+                            att_vals[nz_mask] - nz_mean) / (nz_std + 1e-8)
+                    att_vals[~nz_mask] = 0.0
                 plot_attentions(out_path, index, 
                         smiles[i], att_vals
                         )
