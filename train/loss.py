@@ -11,7 +11,7 @@ def prepare_masked_data(
     if isinstance(y_true, (Batch, Data)):
         y_true = y_true.y
     if isinstance(y_pred, (Batch, Data)):
-        y_pred = y_pred.y
+        raise ValueError("y_pred must be a tensor")
     if not torch.is_tensor(y_true):
         raise ValueError("y_true must be a tensor")
     if not torch.is_tensor(y_pred):
@@ -20,6 +20,7 @@ def prepare_masked_data(
         raise ValueError(
             "y_true and y_pred must match shape"
         )
+    y_true = y_true.to(dtype=y_pred.dtype)
     mask = ~torch.isnan(y_true) 
     y_true = torch.nan_to_num(y_true, nan=0.0)
     y_pred = torch.nan_to_num(y_pred, nan=0.0)
@@ -58,9 +59,14 @@ class SupervisedUncertainty(nn.Module):
                 0.5 * torch.exp(-alphas) * losses
                 + 0.5 * alphas
                 )
+        denom = mask.sum()
+        if denom == 0:
+            return losses.new_tensor(
+                0.0, requires_grad=True
+                )
         return (
             weighted * mask.float()
-        ).sum() / mask.sum()
+        ).sum() / denom
 
 
 def MaskedLoss(
@@ -82,6 +88,11 @@ def MaskedLoss(
             loss = F.mse_loss(
                 y_p, y_t, reduction='none'
                 )
-        return (loss * mask.float()).sum() / mask.sum()
+        denom = mask.sum()
+        if denom == 0:
+            return loss.new_tensor(
+                0.0, requires_grad=True
+                )
+        return (loss * mask.float()).sum() / denom
 
     return masked_loss_function
