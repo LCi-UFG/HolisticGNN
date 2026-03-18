@@ -330,31 +330,6 @@ def view_explanations(
                 index += 1
 
 
-def cluster_attentions(
-    weights, 
-    edge_index):
-
-    n = weights.size(0)
-    raw = weights.sum(0).cpu().numpy() / n
-    centered = raw - raw.mean()
-    attn = np.zeros(n)
-    edges = edge_index.cpu().numpy().T.tolist()
-    G = nx.Graph()
-    G.add_nodes_from(range(n))
-    G.add_edges_from(edges)
-    pos = np.where(centered >= 0)[0]
-    neg = np.where(centered < 0)[0]
-
-    for idx in [pos, neg]:
-        if idx.size:
-            for comp in nx.connected_components(
-                G.subgraph(idx)):
-                m = list(comp)
-                attn[m] = centered[m].mean()
-
-    return attn
-
-
 def plot_attentions(
     out_path, 
     index, 
